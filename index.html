@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Root &amp; Radish — Plant Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B211C;
+    --surface: #232B24;
+    --surface-2: #2B342C;
+    --line: #3A4339;
+    --text: #EDEAE0;
+    --text-dim: #A9B0A3;
+    --accent: #9FB89A;
+    --accent-strong: #C4D9C0;
+    --warn: #C97B4A;
+    --error: #D97757;
+    --radius: 4px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100%;
+  }
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 0 0 .4em; }
+  a { color: inherit; }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 9px 16px;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #16201A; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: var(--accent-strong); }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input, select {
+    font-family: inherit;
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    width: 100%;
+  }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+  .field { margin-bottom: 14px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    padding-top: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    max-width: 980px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { font-family: 'Fraunces', serif; font-style: italic; font-size: 21px; }
+  nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  nav button { background: transparent; border-color: transparent; color: var(--text-dim); }
+  nav button.active { color: var(--text); border-color: var(--line); background: var(--surface); }
+  .cart-count { display: inline-block; min-width: 18px; text-align: center; background: var(--warn); color: #201510; border-radius: 10px; font-size: 11px; padding: 1px 5px; margin-left: 5px; }
+
+  main { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .intro { max-width: 520px; margin-bottom: 24px; color: var(--text-dim); }
+
+  .auth-card { max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
+  .switch-line { font-size: 13px; color: var(--text-dim); margin-top: 14px; }
+  .switch-line button { background: none; border: none; color: var(--accent); padding: 0; text-decoration: underline; }
+
+  .error-msg { color: var(--error); font-size: 13px; margin-top: 6px; min-height: 1em; }
+  .success-msg { color: var(--accent-strong); font-size: 13px; margin-top: 6px; min-height: 1em; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .toolbar input[type="text"] { max-width: 260px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .plant-glyph { font-size: 30px; line-height: 1; }
+  .card h3 { font-size: 15px; }
+  .price { color: var(--accent-strong); font-weight: 600; }
+  .qty-row { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+  .qty-row input { width: 60px; }
+
+  .tip-wrap { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+  .tip-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--text-dim); color: var(--text-dim); font-size: 11px; display: inline-flex; align-items: center; justify-content: center; cursor: default; }
+  .tooltip {
+    position: absolute; top: 130%; left: 0; background: var(--surface-2); border: 1px solid var(--line);
+    padding: 8px 10px; border-radius: 6px; font-size: 12px; color: var(--text-dim); width: 220px;
+    display: none; z-index: 20;
+  }
+  .tip-wrap:hover .tooltip { display: block; }
+
+  table { width: 100%; border-collapse: collapse; overflow-x: auto; display: block; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 14px; white-space: nowrap; }
+  th { color: var(--text-dim); font-weight: 500; font-size: 12px; }
+
+  .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  .totals-row.grand { font-size: 17px; font-family: 'Fraunces', serif; border-top: 1px solid var(--line); margin-top: 8px; padding-top: 12px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .toast {
+    position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); right: 20px;
+    background: var(--surface-2); border: 1px solid var(--accent); color: var(--text);
+    padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none; max-width: 280px; z-index: 50;
+  }
+  .toast.show { display: block; }
+  .muted { color: var(--text-dim); font-size: 13px; }
+  .edit-price { background: none; border: none; color: var(--text-dim); font-size: 12px; text-decoration: underline; padding: 0; }
+  @media (max-width: 520px) {
+    .bar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="brand">Root &amp; Radish</div>
+    <nav id="nav">
+      <button data-view="auth" class="nav-btn">Account</button>
+      <button data-view="products" class="nav-btn">Shop</button>
+      <button data-view="cart" class="nav-btn">Cart<span class="cart-count" id="navCartCount">0</span></button>
+      <button data-view="dashboard" class="nav-btn">Dashboard</button>
+      <button id="headerLogout">Logout</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- AUTH VIEW -->
+  <section class="view" id="view-auth">
+    <div class="intro">
+      <h1 id="authHeading">Welcome back</h1>
+      <p class="muted">Sign in to manage orders, or create an account to start shopping.</p>
+    </div>
+    <div class="auth-card">
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" tabindex="1" required>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" tabindex="2" required>
+        </div>
+        <div class="error-msg" id="loginError"></div>
+        <button type="submit" class="primary" tabindex="4">Sign in</button>
+      </form>
+      <div class="switch-line">New here? <button id="showRegister">Create an account</button></div>
+    </div>
+
+    <div class="auth-card" id="registerCard" style="display:none; margin-top:16px;">
+      <h3>Create your account</h3>
+      <form id="registerForm">
+        <div class="field">
+          <label for="regName">Name</label>
+          <input type="text" id="regName" required>
+        </div>
+        <div class="field">
+          <label for="regEmail">Email</label>
+          <input type="text" id="regEmail" required>
+        </div>
+        <div class="field">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" required>
+        </div>
+        <div class="error-msg" id="registerError"></div>
+        <button type="submit" class="primary">Create account</button>
+      </form>
+      <div class="switch-line">Already have an account? <button id="showLogin">Sign in</button></div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS VIEW -->
+  <section class="view" id="view-products">
+    <div class="intro">
+      <h1>Shop the greenhouse</h1>
+      <p class="muted">Search, filter, and add plants to your cart.</p>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="productSearch" placeholder="Search plants…">
+      <span class="muted" id="resultCount"></span>
+    </div>
+    <div class="grid" id="productGrid"></div>
+  </section>
+
+  <!-- CART VIEW -->
+  <section class="view" id="view-cart">
+    <div class="intro">
+      <h1>Your cart</h1>
+      <p class="muted">Review items, apply a promo code, and check out.</p>
+    </div>
+    <div class="panel">
+      <table id="cartTable">
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody id="cartBody"></tbody>
+      </table>
+      <p class="muted" id="cartEmpty" style="display:none;">Your cart is empty. Head to the shop to add plants.</p>
+    </div>
+    <div class="panel" style="max-width:340px;">
+      <div class="field">
+        <label for="promoInput">
+          Promo code
+          <span class="tip-wrap">
+            <span class="tip-icon">?</span>
+            <span class="tooltip">Codes can be combined. Try SPROUT10 and LEAFY20 together for extra savings on your order.</span>
+          </span>
+        </label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="promoInput" placeholder="e.g. SPROUT10">
+          <button id="applyPromo">Apply</button>
+        </div>
+        <div class="muted" id="promoList" style="margin-top:6px;"></div>
+      </div>
+      <div class="totals-row"><span>Subtotal</span><span id="sumSubtotal">$0.00</span></div>
+      <div class="totals-row"><span>Discount</span><span id="sumDiscount">−$0.00</span></div>
+      <div class="totals-row grand"><span>Total</span><span id="sumTotal">$0.00</span></div>
+      <button class="primary" id="placeOrderBtn" style="width:100%; margin-top:14px;">Place order</button>
+      <div class="success-msg" id="orderMsg"></div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section class="view" id="view-dashboard">
+    <div class="intro">
+      <h1>Your dashboard</h1>
+      <p class="muted">Profile details and order history.</p>
+    </div>
+    <div class="panel" style="max-width:420px;">
+      <h3>Profile</h3>
+      <div class="field">
+        <label for="profileName">Display name</label>
+        <input type="text" id="profileName">
+      </div>
+      <div class="field">
+        <label>Member since</label>
+        <div id="memberSince" class="muted"></div>
+      </div>
+      <button class="primary" id="saveProfileBtn">Save changes</button>
+      <div class="success-msg" id="profileMsg"></div>
+      <hr style="border-color:var(--line); margin:18px 0;">
+      <button id="signOutBtn">Sign out</button>
+    </div>
+    <div class="panel">
+      <h3>Order history</h3>
+      <table>
+        <thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+      <p class="muted" id="ordersEmpty" style="display:none;">No orders yet.</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- mock backend ---------------- */
+  const PLANT_NAMES = ["Monstera","Pothos","Snake Plant","Fiddle Leaf Fig","ZZ Plant","Philodendron","Peace Lily","Rubber Plant","Calathea","String of Pearls","Aloe Vera","Bird of Paradise","Jade Plant","Spider Plant","Boston Fern","Croton","Anthurium","Dracaena","Haworthia","Areca Palm"];
+  const GLYPHS = ["🌿","🪴","🌱","🌵","🍃"];
+
+  function buildCatalog() {
+    const items = [];
+    let id = 1;
+    for (let i = 0; i < 8; i++) {
+      PLANT_NAMES.forEach((name) => {
+        items.push({
+          id: id++,
+          name: i === 0 ? name : name + " (No. " + (i + 1) + ")",
+          price: Math.round((8 + Math.random() * 60) * 100) / 100,
+          glyph: GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+        });
+      });
+    }
+    return items;
+  }
+
+  // "server-side" store, separate from the client cache below
+  const SERVER = {
+    products: buildCatalog(),
+    users: JSON.parse(localStorage.getItem("rr_users") || "[]"),
+  };
+
+  function persistUsers() {
+    localStorage.setItem("rr_users", JSON.stringify(SERVER.users));
+  }
+
+  // naive client-side response cache, keyed by endpoint, with a TTL —
+  // never invalidated when the underlying product data changes
+  const responseCache = { products: { data: null, ts: 0 } };
+  const CACHE_TTL_MS = 10000;
+
+  function apiGetProducts() {
+    // logs one request per card render rather than a single batched call
+    return new Promise((resolve) => {
+      const now = Date.now();
+      if (responseCache.products.data && (now - responseCache.products.ts) < CACHE_TTL_MS) {
+        resolve(responseCache.products.data);
+        return;
+      }
+      setTimeout(() => {
+        const snapshot = SERVER.products.map(p => ({ ...p }));
+        responseCache.products = { data: snapshot, ts: Date.now() };
+        resolve(snapshot);
+      }, 40);
+    });
+  }
+
+  function apiUpdatePrice(id, newPrice) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const p = SERVER.products.find(p => p.id === id);
+        if (p) p.price = newPrice;
+        // note: responseCache is intentionally NOT invalidated here
+        resolve({ ok: true });
+      }, 30);
+    });
+  }
+
+  function apiSaveProfile(name) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const ok = Math.random() > 0.5;
+        resolve({ ok, status: ok ? 200 : 500 });
+      }, 250);
+    });
+  }
+
+  /* ---------------- session / state ---------------- */
+  let session = JSON.parse(localStorage.getItem("rr_session") || "null");
+  let cart = JSON.parse(localStorage.getItem("rr_cart") || "[]");
+  let orders = JSON.parse(localStorage.getItem("rr_orders") || "[]");
+  let catalogCache = [];
+  let placingOrder = false;
+
+  function saveCart() { localStorage.setItem("rr_cart", JSON.stringify(cart)); }
+  function saveOrders() { localStorage.setItem("rr_orders", JSON.stringify(orders)); }
+  function saveSession() { localStorage.setItem("rr_session", JSON.stringify(session)); }
+
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._h);
+    toast._h = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+
+  /* ---------------- nav ---------------- */
+  const views = ["auth", "products", "cart", "dashboard"];
+  function showView(name) {
+    views.forEach(v => {
+      document.getElementById("view-" + v).classList.toggle("active", v === name);
+    });
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+    if (name === "products") renderProducts();
+    if (name === "cart") renderCart();
+    if (name === "dashboard") renderDashboard();
+  }
+  document.getElementById("nav").addEventListener("click", (e) => {
+    const btn = e.target.closest(".nav-btn");
+    if (btn) showView(btn.dataset.view);
+  });
+
+  // header Logout: intentionally inert — no handler attaches any real
+  // session-clearing behavior here (candidates should notice nothing happens)
+
+  /* ---------------- auth ---------------- */
+  document.getElementById("showRegister").addEventListener("click", () => {
+    document.getElementById("registerCard").style.display = "block";
+  });
+  document.getElementById("showLogin").addEventListener("click", () => {
+    document.getElementById("registerCard").style.display = "none";
+  });
+
+  function isValidEmail(v) {
+    // does not actually require an "@" — only checks for a dot and length
+    return v.length > 5 && v.includes(".");
+  }
+
+  document.getElementById("registerForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value; // not trimmed on purpose
+    const errEl = document.getElementById("registerError");
+    errEl.textContent = "";
+
+    if (!isValidEmail(email)) {
+      errEl.textContent = "Enter a valid email address.";
+      return;
+    }
+    if (password.length < 4) {
+      errEl.textContent = "Password must be at least 4 characters.";
+      return;
+    }
+    if (SERVER.users.some(u => u.email === email)) {
+      errEl.textContent = "An account with that email already exists.";
+      return;
+    }
+    SERVER.users.push({ name, email, password, since: new Date().toISOString() });
+    persistUsers();
+    toast("Account created — you can now sign in.");
+    document.getElementById("registerCard").style.display = "none";
+    document.getElementById("loginEmail").value = email;
+  });
+
+  document.getElementById("loginForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim(); // trimmed here, unlike registration
+    const errEl = document.getElementById("loginError");
+    errEl.textContent = "";
+
+    const user = SERVER.users.find(u => u.email === email && u.password === password);
+    if (!user) {
+      errEl.textContent = "Incorrect email or password.";
+      return;
+    }
+    session = { email: user.email, name: user.name, since: user.since };
+    saveSession();
+    toast("Signed in as " + user.name);
+    refreshHeader();
+    showView("products");
+  });
+
+  document.getElementById("signOutBtn").addEventListener("click", () => {
+    session = null;
+    saveSession();
+    // cart is intentionally left in localStorage — the next person to sign
+    // in on this device will still see it
+    refreshHeader();
+    toast("Signed out.");
+    showView("auth");
+  });
+
+  function refreshHeader() {
+    document.getElementById("authHeading").textContent = session ? "Welcome back, " + session.name : "Welcome back";
+  }
+
+  /* ---------------- products ---------------- */
+  function renderProducts() {
+    const grid = document.getElementById("productGrid");
+    const q = document.getElementById("productSearch").value.trim().toLowerCase();
+
+    apiGetProducts().then((products) => {
+      catalogCache = products;
+      const filtered = q ? products.filter(p => p.name.toLowerCase().includes(q)) : products;
+      document.getElementById("resultCount").textContent = filtered.length + " plants";
+
+      // heavy synchronous work runs on every keystroke, with no debounce,
+      // and does a full innerHTML rebuild of every card each time
+      let busy = 0;
+      for (let i = 0; i < filtered.length * 4000; i++) { busy += Math.sqrt(i); }
+
+      grid.innerHTML = filtered.map(p => `
+        <div class="card">
+          <div class="plant-glyph">${p.glyph}</div>
+          <h3>${p.name}</h3>
+          <button class="edit-price" data-editprice="${p.id}">Edit price</button>
+          <div class="price">$${p.price.toFixed(2)}</div>
+          <div class="qty-row">
+            <input type="number" value="1" data-qty="${p.id}">
+            <button data-add="${p.id}">Add to cart</button>
+          </div>
+        </div>
+      `).join("");
+    });
+  }
+
+  document.getElementById("productSearch").addEventListener("input", renderProducts);
+
+  document.getElementById("productGrid").addEventListener("click", (e) => {
+    const addBtn = e.target.closest("[data-add]");
+    const editBtn = e.target.closest("[data-editprice]");
+
+    if (addBtn) {
+      const id = Number(addBtn.dataset.add);
+      const qtyInput = document.querySelector('[data-qty="' + id + '"]');
+      const qty = Number(qtyInput.value); // no min/validation — negatives and 0 both pass through
+      const existing = cart.find(c => c.id === id);
+      if (existing) existing.qty += qty; else cart.push({ id, qty });
+      saveCart();
+      // cart array is updated, but the header badge is only ever set once
+      // on initial load — it does not get called again here
+      toast("Added to cart.");
+    }
+
+    if (editBtn) {
+      const id = Number(editBtn.dataset.editprice);
+      const product = catalogCache.find(p => p.id === id);
+      const next = prompt("New price for " + (product ? product.name : "item") + ":", product ? product.price : "");
+      if (next !== null && !isNaN(parseFloat(next))) {
+        apiUpdatePrice(id, Math.round(parseFloat(next) * 100) / 100).then(() => {
+          toast("Price updated.");
+          renderProducts();
+        });
+      }
+    }
+  });
+
+  /* ---------------- cart ---------------- */
+  const promosApplied = [];
+  const PROMO_TABLE = { SPROUT10: 0.10, LEAFY20: 0.20 };
+
+  function cartLines() {
+    return cart.map(c => {
+      const p = SERVER.products.find(p => p.id === c.id);
+      return p ? { ...p, qty: c.qty, subtotal: p.price * c.qty } : null;
+    }).filter(Boolean);
+  }
+
+  function renderCart() {
+    const body = document.getElementById("cartBody");
+    const lines = cartLines();
+    document.getElementById("cartEmpty").style.display = lines.length ? "none" : "block";
+    body.innerHTML = lines.map(l => `
+      <tr>
+        <td>${l.name}</td>
+        <td>${l.qty}</td>
+        <td>$${l.price.toFixed(2)}</td>
+        <td>$${l.subtotal.toFixed(2)}</td>
+        <td><button data-remove="${l.id}">Remove</button></td>
+      </tr>
+    `).join("");
+    updateTotals();
+    document.getElementById("promoList").textContent = promosApplied.length ? "Applied: " + promosApplied.join(", ") : "";
+  }
+
+  document.getElementById("cartBody").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove]");
+    if (!btn) return;
+    const id = Number(btn.dataset.remove);
+    cart = cart.filter(c => c.id !== id);
+    saveCart();
+    renderCart();
+  });
+
+  document.getElementById("applyPromo").addEventListener("click", () => {
+    const code = document.getElementById("promoInput").value.trim().toUpperCase();
+    if (PROMO_TABLE[code] && !promosApplied.includes(code)) {
+      promosApplied.push(code);
+    }
+    document.getElementById("promoInput").value = "";
+    renderCart();
+  });
+
+  function updateTotals() {
+    const subtotal = cartLines().reduce((s, l) => s + l.subtotal, 0);
+    // each stacked code is applied against the ORIGINAL subtotal rather
+    // than the already-discounted amount, so multiple codes over-discount
+    const discount = promosApplied.reduce((s, code) => s + subtotal * PROMO_TABLE[code], 0);
+    const total = subtotal - discount;
+    document.getElementById("sumSubtotal").textContent = "$" + subtotal.toFixed(2);
+    document.getElementById("sumDiscount").textContent = "−$" + discount.toFixed(2);
+    document.getElementById("sumTotal").textContent = "$" + total.toFixed(2);
+  }
+
+  document.getElementById("placeOrderBtn").addEventListener("click", () => {
+    // no guard against a second click while the first is still in flight
+    const lines = cartLines();
+    if (!lines.length) return;
+    const subtotal = lines.reduce((s, l) => s + l.subtotal, 0);
+    const discount = promosApplied.reduce((s, code) => s + subtotal * PROMO_TABLE[code], 0);
+
+    setTimeout(() => {
+      orders.push({
+        id: "RR-" + Math.floor(1000 + Math.random() * 9000),
+        date: new Date().toISOString(),
+        items: lines.reduce((n, l) => n + l.qty, 0),
+        total: subtotal - discount
+      });
+      saveOrders();
+      cart = [];
+      promosApplied.length = 0;
+      saveCart();
+      renderCart();
+      document.getElementById("orderMsg").textContent = "Order placed — thank you!";
+      placingOrder = false;
+    }, 500);
+  });
+
+  /* ---------------- dashboard ---------------- */
+  function renderDashboard() {
+    document.getElementById("profileName").value = session ? session.name : "";
+    document.getElementById("memberSince").textContent = session
+      ? new Date(session.since).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+      : "—";
+
+    const body = document.getElementById("ordersBody");
+    document.getElementById("ordersEmpty").style.display = orders.length ? "none" : "block";
+    body.innerHTML = orders.slice().reverse().map(o => `
+      <tr>
+        <td>${o.id}</td>
+        <td>${new Date(o.date).toISOString().split("T")[0]}</td>
+        <td>${o.items}</td>
+        <td>$${o.total.toFixed(2)}</td>
+      </tr>
+    `).join("");
+  }
+
+  document.getElementById("saveProfileBtn").addEventListener("click", () => {
+    const name = document.getElementById("profileName").value.trim();
+    const msg = document.getElementById("profileMsg");
+    msg.textContent = "Saving…";
+    apiSaveProfile(name).then((res) => {
+      // success message shown regardless of res.ok
+      if (session) session.name = name;
+      saveSession();
+      msg.textContent = "Profile updated.";
+    });
+  });
+
+  /* ---------------- init ---------------- */
+  function updateNavCartCount() {
+    const count = cart.reduce((s, c) => s + c.qty, 0);
+    document.getElementById("navCartCount").textContent = count; // set once, not wired to future changes
+  }
+
+  refreshHeader();
+  updateNavCartCount();
+  showView(session ? "products" : "auth");
+})();
+</script>
+</body>
+</html>
