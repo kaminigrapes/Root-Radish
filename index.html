@@ -78,7 +78,7 @@
   nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
   nav button { background: transparent; border-color: transparent; color: var(--text-dim); }
   nav button.active { color: var(--text); border-color: var(--line); background: var(--surface); }
-  .cart-count { display: inline-block; min-width: 18px; text-align: center; background: var(--warn); color: #201510; border-radius: 10px; font-size: 11px; padding: 1px 5px; margin-left: 5px; }
+  .cart-count { display: inline-block; min-width: 18px; text-align: center; background: var(--warn); color: #201510; border-radius: 10px; font-size: 11px; padding: 1px 5px; margin-left: -10px; position: relative; top: -6px; }
 
   main { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
   .view { display: none; }
@@ -271,7 +271,7 @@
     <div class="panel">
       <h3>Order history</h3>
       <table>
-        <thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead>
+        <thead><tr><th>Order</th><th>Date</th><th>Time</th><th>Items</th><th>Total</th></tr></thead>
         <tbody id="ordersBody"></tbody>
       </table>
       <p class="muted" id="ordersEmpty" style="display:none;">No orders yet.</p>
@@ -379,6 +379,7 @@
   /* ---------------- nav ---------------- */
   const views = ["auth", "products", "cart", "dashboard"];
   function showView(name) {
+    if (name === "dashboard" && !session) name = "auth";
     views.forEach(v => {
       document.getElementById("view-" + v).classList.toggle("active", v === name);
     });
@@ -466,6 +467,10 @@
 
   function refreshHeader() {
     document.getElementById("authHeading").textContent = session ? "Welcome back, " + session.name : "Welcome back";
+    document.querySelector('.nav-btn[data-view="dashboard"]').style.display = session ? "" : "none";
+    if (!session && document.getElementById("view-dashboard").classList.contains("active")) {
+      showView("auth");
+    }
   }
 
   /* ---------------- products ---------------- */
@@ -564,6 +569,8 @@
     cart = cart.filter(c => c.id !== id);
     saveCart();
     renderCart();
+    // wrong message copy: says "Added" even though the item was removed
+    toast("Added to cart.");
   });
 
   document.getElementById("applyPromo").addEventListener("click", () => {
@@ -587,6 +594,15 @@
   }
 
   document.getElementById("placeOrderBtn").addEventListener("click", () => {
+    if (!session) {
+      document.getElementById("orderMsg").style.color = "var(--error)";
+      document.getElementById("orderMsg").textContent = "Please sign in to place an order.";
+      toast("Sign in required to check out.");
+      showView("auth");
+      return;
+    }
+    document.getElementById("orderMsg").style.color = "";
+
     // no guard against a second click while the first is still in flight
     const lines = cartLines();
     if (!lines.length) return;
@@ -614,7 +630,11 @@
   function renderDashboard() {
     document.getElementById("profileName").value = session ? session.name : "";
     document.getElementById("memberSince").textContent = session
-      ? new Date(session.since).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+      ? (function () {
+          const shifted = new Date(new Date(session.since).getTime() + 3600000);
+          return shifted.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+            + " at " + shifted.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        })()
       : "—";
 
     const body = document.getElementById("ordersBody");
@@ -623,6 +643,7 @@
       <tr>
         <td>${o.id}</td>
         <td>${new Date(o.date).toISOString().split("T")[0]}</td>
+        <td>${new Date(o.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</td>
         <td>${o.items}</td>
         <td>$${o.total.toFixed(2)}</td>
       </tr>
