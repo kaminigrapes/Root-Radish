@@ -204,6 +204,13 @@
       <h1>Shop the greenhouse</h1>
       <p class="muted">Search, filter, and add plants to your cart.</p>
     </div>
+    <div class="panel" style="max-width:420px; padding:14px 16px;">
+      <div id="deliveryIdle">
+        <button id="checkDeliveryBtn">📍 Check delivery time to your area</button>
+      </div>
+      <div id="deliveryLoading" class="muted" style="display:none;">Calculating delivery estimate…</div>
+      <div id="deliveryResult" class="muted" style="display:none;"></div>
+    </div>
     <div class="toolbar">
       <input type="text" id="productSearch" placeholder="Search plants…">
       <span class="muted" id="resultCount"></span>
@@ -233,6 +240,10 @@
             <span class="tooltip">Codes can be combined. Try SPROUT10 and LEAFY20 together for extra savings on your order.</span>
           </span>
         </label>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <button type="button" class="promo-chip" data-code="SPROUT10" style="font-size:12px; padding:5px 10px;">SPROUT10 (10%) ⧉</button>
+          <button type="button" class="promo-chip" data-code="LEAFY20" style="font-size:12px; padding:5px 10px;">LEAFY20 (20%) ⧉</button>
+        </div>
         <div style="display:flex; gap:8px;">
           <input type="text" id="promoInput" placeholder="e.g. SPROUT10">
           <button id="applyPromo">Apply</button>
@@ -241,6 +252,9 @@
       </div>
       <div class="totals-row"><span>Subtotal</span><span id="sumSubtotal">$0.00</span></div>
       <div class="totals-row"><span>Discount</span><span id="sumDiscount">−$0.00</span></div>
+      <div class="totals-row"><span>Tax (8%)</span><span id="sumTax">$0.00</span></div>
+      <div class="totals-row"><span>Shipping</span><span id="sumShipping">$0.00</span></div>
+      <p class="muted" style="margin: 4px 0 0; font-size: 12px;">Free shipping on orders over $50 after discount. Tax is calculated on your discounted total.</p>
       <div class="totals-row grand"><span>Total</span><span id="sumTotal">$0.00</span></div>
       <button class="primary" id="placeOrderBtn" style="width:100%; margin-top:14px;">Place order</button>
       <div class="success-msg" id="orderMsg"></div>
@@ -265,6 +279,12 @@
       </div>
       <button class="primary" id="saveProfileBtn">Save changes</button>
       <div class="success-msg" id="profileMsg"></div>
+      <hr style="border-color:var(--line); margin:18px 0;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="notifyToggle" style="width:auto;">
+        Notify me about my orders
+      </label>
+      <div class="success-msg" id="notifyMsg"></div>
       <hr style="border-color:var(--line); margin:18px 0;">
       <button id="signOutBtn">Sign out</button>
     </div>
@@ -465,6 +485,19 @@
     showView("auth");
   });
 
+  document.getElementById("notifyToggle").addEventListener("change", (e) => {
+    const msg = document.getElementById("notifyMsg");
+    if (!e.target.checked) {
+      msg.textContent = "";
+      return;
+    }
+    Notification.requestPermission().then(function (result) {
+      // bug: shows the "enabled" success message regardless of what the
+      // person actually chose — result is never checked against "granted"
+      msg.textContent = "Notifications enabled.";
+    });
+  });
+
   function refreshHeader() {
     document.getElementById("authHeading").textContent = session ? "Welcome back, " + session.name : "Welcome back";
     document.querySelector('.nav-btn[data-view="dashboard"]').style.display = session ? "" : "none";
@@ -505,6 +538,25 @@
 
   document.getElementById("productSearch").addEventListener("input", renderProducts);
 
+  /* ---------------- delivery estimate (geolocation) ---------------- */
+  document.getElementById("checkDeliveryBtn").addEventListener("click", () => {
+    document.getElementById("deliveryIdle").style.display = "none";
+    document.getElementById("deliveryLoading").style.display = "block";
+    document.getElementById("deliveryResult").style.display = "none";
+
+    navigator.geolocation.getCurrentPosition(
+      function onGranted(pos) {
+        document.getElementById("deliveryLoading").style.display = "none";
+        const resultEl = document.getElementById("deliveryResult");
+        resultEl.style.display = "block";
+        resultEl.textContent = "Estimated delivery: 2–4 business days to your area.";
+      }
+      // no error callback passed — if the person denies the permission
+      // prompt (or it's unavailable), nothing ever fires and the UI is
+      // left stuck on "Calculating delivery estimate…" forever
+    );
+  });
+
   document.getElementById("productGrid").addEventListener("click", (e) => {
     const addBtn = e.target.closest("[data-add]");
     const editBtn = e.target.closest("[data-editprice]");
@@ -516,8 +568,7 @@
       const existing = cart.find(c => c.id === id);
       if (existing) existing.qty += qty; else cart.push({ id, qty });
       saveCart();
-      // cart array is updated, but the header badge is only ever set once
-      // on initial load — it does not get called again here
+      updateNavCartCount();
       toast("Added to cart.");
     }
 
@@ -569,8 +620,21 @@
     cart = cart.filter(c => c.id !== id);
     saveCart();
     renderCart();
+    updateNavCartCount();
     // wrong message copy: says "Added" even though the item was removed
     toast("Added to cart.");
+  });
+
+  document.querySelectorAll(".promo-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const code = chip.dataset.code;
+      navigator.clipboard.writeText(code).then(() => {
+        toast("Copied " + code + " to clipboard.");
+      }).catch(() => {
+        document.getElementById("promoInput").value = code;
+        toast(code + " added to the field.");
+      });
+    });
   });
 
   document.getElementById("applyPromo").addEventListener("click", () => {
@@ -587,9 +651,22 @@
     // each stacked code is applied against the ORIGINAL subtotal rather
     // than the already-discounted amount, so multiple codes over-discount
     const discount = promosApplied.reduce((s, code) => s + subtotal * PROMO_TABLE[code], 0);
-    const total = subtotal - discount;
+
+    // stated rule: "tax is calculated on your discounted total" — but this
+    // computes tax on the pre-discount subtotal instead
+    const tax = subtotal * 0.08;
+
+    // stated rule: "free shipping over $50 after discount" — but this
+    // checks the pre-discount subtotal against the threshold instead
+    const FREE_SHIPPING_THRESHOLD = 50;
+    const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 6.50;
+
+    const total = subtotal - discount + tax + shipping;
+
     document.getElementById("sumSubtotal").textContent = "$" + subtotal.toFixed(2);
     document.getElementById("sumDiscount").textContent = "−$" + discount.toFixed(2);
+    document.getElementById("sumTax").textContent = "$" + tax.toFixed(2);
+    document.getElementById("sumShipping").textContent = shipping === 0 ? "Free" : "$" + shipping.toFixed(2);
     document.getElementById("sumTotal").textContent = "$" + total.toFixed(2);
   }
 
@@ -608,19 +685,22 @@
     if (!lines.length) return;
     const subtotal = lines.reduce((s, l) => s + l.subtotal, 0);
     const discount = promosApplied.reduce((s, code) => s + subtotal * PROMO_TABLE[code], 0);
+    const tax = subtotal * 0.08;
+    const shipping = subtotal >= 50 ? 0 : 6.50;
 
     setTimeout(() => {
       orders.push({
         id: "RR-" + Math.floor(1000 + Math.random() * 9000),
         date: new Date().toISOString(),
         items: lines.reduce((n, l) => n + l.qty, 0),
-        total: subtotal - discount
+        total: subtotal - discount + tax + shipping
       });
       saveOrders();
       cart = [];
       promosApplied.length = 0;
       saveCart();
       renderCart();
+      updateNavCartCount();
       document.getElementById("orderMsg").textContent = "Order placed — thank you!";
       placingOrder = false;
     }, 500);
@@ -665,7 +745,7 @@
   /* ---------------- init ---------------- */
   function updateNavCartCount() {
     const count = cart.reduce((s, c) => s + c.qty, 0);
-    document.getElementById("navCartCount").textContent = count; // set once, not wired to future changes
+    document.getElementById("navCartCount").textContent = count;
   }
 
   refreshHeader();
